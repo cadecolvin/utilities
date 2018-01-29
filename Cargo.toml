@@ -1,0 +1,8 @@
+[package]
+name = "utilities"
+version = "0.1.0"
+authors = ["Cade Colvin <ccolvin@evolution1.com>"]
+
+[dependencies]
+clap = "2.29.2"
+regex = "0.2.5"
