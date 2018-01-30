@@ -1,11 +1,12 @@
-//! Find IMproved is a customized version of the unix Find tool.
+//! **F**ind **IM**proved is a customized version of the unix Find tool.
 //! 
 //! Fim is used to perform a basic regex search of filenames.
-//! By default, fim will perform a recursive search starting with ./.
-//! A start directory can be specified with the `directory` parameter however.
+//! By default, fim will perform a recursive search starting with `./`. 
+//! A start directory can be specified with the `--directory` parameter however.
 
 
 use std::env;
+use std::io::prelude::*;
 use std::path::{Path,PathBuf};
 use std::process;
 
@@ -14,6 +15,8 @@ use clap::{App, Arg};
 
 extern crate regex;
 use regex::Regex;
+
+extern crate term;
 
 fn main() {
     let matches = App::new("Fim: Find IMproved")
@@ -37,23 +40,41 @@ fn main() {
         None => env::current_dir().unwrap()
     };
     
-    // Parse the passed text into a regex pattern
+    // Parse the `pattern` argument into a regex pattern
     let re_pattern = matches.value_of("pattern").unwrap();
     let re = match Regex::new(re_pattern) {
         Ok(r) => r,
         Err(_) => {
-            println!("Unable to parse regex string");
+            eprintln!("Unable to parse regex string");
             process::exit(1);
         }
     };
+
+    // Setup stdout so that we can color the match in the output
+    let mut stdout = term::stdout().unwrap();
 
     let mut file_paths= Vec::new();
     get_file_paths(root_dir.as_path(), &mut file_paths);
 
     for f in file_paths{
         if let Some(file_name) = f.file_name() {
-            if re.is_match(file_name.to_str().unwrap()) {
-                println!("{}", f.to_str().unwrap());
+            let file_name_str = file_name.to_str().unwrap();
+            if re.is_match(file_name_str) {
+                if let Some(m) = re.find(file_name_str) {
+
+                    // Split the filename into 3 chunks so we can color output
+                    let file_name_pre_match = file_name_str.split_at(m.start()).0;
+                    let file_name_match = m.as_str();
+                    let file_name_post_match = file_name_str.split_at(m.end()).1;
+
+                    (write!(stdout, "{}", file_name_pre_match)).unwrap();
+
+                    stdout.fg(term::color::GREEN).unwrap();
+                    (write!(stdout, "{}", file_name_match)).unwrap();
+                    stdout.reset().unwrap();
+
+                    (writeln!(stdout, "{}", file_name_post_match)).unwrap();
+                }
             }
         }
     }
