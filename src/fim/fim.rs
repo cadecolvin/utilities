@@ -20,7 +20,7 @@ extern crate term;
 
 fn main() {
     let matches = App::new("Fim: Find IMproved")
-                            .version("0.2.0")
+                            .version("0.3.0")
                             .author("Cade Colvin <cade.colvin@gmail.com>")
                             .about("A customized version of the unix find command")
                             .arg(Arg::with_name("directory")
