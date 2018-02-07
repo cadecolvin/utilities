@@ -3,8 +3,8 @@
 //! Running `prepend test temp.txt` is the same as running `sed "i1test" temp.txt'
 
 use std::io::{BufRead, BufReader, BufWriter};
-use std::io::{Read, Write};
-use std::fs::{self, File, OpenOptions};
+use std::io::Write;
+use std::fs::{self, File};
 use std::path::PathBuf;
 use std::process;
 
@@ -30,7 +30,7 @@ fn main() {
     let file_path_arg = matches.value_of("file").unwrap();
     let prepend_text = matches.value_of("text").unwrap();
 
-    let mut file_path = PathBuf::from(file_path_arg);
+    let file_path = PathBuf::from(file_path_arg);
     let original_extension = match file_path.extension() {
         Some(e) => e.to_str().unwrap(),
         None => "",
@@ -48,7 +48,7 @@ fn main() {
         }
     };
 
-    let mut file_reader = match File::open(backup_file_path) {
+    let file_reader = match File::open(backup_file_path) {
         Ok(f) => BufReader::new(f),
         Err(_) => {
             eprintln!("Unable to open FILE.bak for reading");
@@ -65,8 +65,8 @@ fn main() {
     };
 
     // Write our data to the new file
-    writeln!(file_writer, "{}", prepend_text);
+    (writeln!(file_writer, "{}", prepend_text)).unwrap();
     for line in file_reader.lines() {
-        writeln!(file_writer, "{}", line.unwrap());
+        (writeln!(file_writer, "{}", line.unwrap())).unwrap();
     }
 }
