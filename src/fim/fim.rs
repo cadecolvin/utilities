@@ -143,6 +143,7 @@ fn show_progress<T>(reciever: Receiver<T>) {
         match reciever.try_recv() {
             Ok(_) => {
                 print!("\r");
+                io::stdout().flush().unwrap();
                 break;
             }
             Err(mpsc::TryRecvError::Empty) => {},
