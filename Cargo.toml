@@ -11,6 +11,10 @@ path = "src/fim/fim.rs"
 name = "prepend"
 path = "src/prepend/prepend.rs"
 
+[[bin]]
+name = "sizer"
+path = "src/sizer/sizer.rs"
+
 [dependencies]
 clap = "2.29.2"
 regex = "0.2.5"

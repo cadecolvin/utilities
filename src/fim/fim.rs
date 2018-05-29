@@ -16,13 +16,11 @@ use std::time::Duration;
 
 #[macro_use]
 extern crate clap;
-use clap::{App, Arg};
-
-
 extern crate regex;
+extern crate term;
+use clap::{App, Arg};
 use regex::Regex;
 
-extern crate term;
 
 fn main() {
     let matches = App::new("Fim: Find IMproved")
