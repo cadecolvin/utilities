@@ -73,7 +73,6 @@ fn main() {
             let file_name_str = file_name.to_str().unwrap();
             if re.is_match(file_name_str) {
                 if let Some(m) = re.find(file_name_str) {
-
                     // Split the filename into 3 chunks so we can color output
                     let file_name_pre_match = file_name_str.split_at(m.start()).0;
                     let file_name_match = m.as_str();
