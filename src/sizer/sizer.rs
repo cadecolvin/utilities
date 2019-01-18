@@ -36,6 +36,83 @@ impl PartialEq for DirectoryInfo {
     }
 }
 
+struct Searcher {
+    root_dir: path::PathBuf,
+    depth: u64,
+}
+
+impl Searcher {
+    fn search(&self) -> Vec<DirectoryInfo> {
+        let mut results = Vec::new();
+        self.parse_dir(&self.root_dir, &mut results);
+        results
+    }
+
+    fn parse_dir(&self, dir: &path::Path, dirs: &mut Vec<DirectoryInfo>) {
+        let mut size_of_files = 0;
+        for entry in dir.read_dir().unwrap() {
+            let entry = entry.unwrap();
+            let md = entry.metadata().unwrap();
+            if md.is_file() {
+                size_of_files = size_of_files + md.len();
+            } else if md.is_dir() {
+                if Searcher::distance(&self.root_dir, &entry.path()).unwrap() < self.depth {
+                    self.parse_dir(&entry.path(), dirs);
+                } else {
+                    let size = Searcher::size_of_dir(dir);
+                    let info = DirectoryInfo {
+                        path: path::PathBuf::from(dir),
+                        size: size,
+                    };
+                    dirs.push(info);
+                }
+            }
+        }
+        let info = DirectoryInfo {
+            path: path::PathBuf::from(dir),
+            size: size_of_files,
+        };
+        dirs.push(info);
+}
+
+    /// Calculates the distance from `dir` to `root`
+    fn distance(root: &path::Path, dir: &path::Path) -> Option<u64> {
+        let mut distance = 0;
+        let mut root_found = false;
+        let mut ancestors = dir.ancestors();
+        ancestors.next(); // Skip self
+        for parent in ancestors {
+            distance = distance + 1;
+            if parent == root {
+                root_found = true;
+                break;
+            }
+        }
+
+        if root_found {
+            Some(distance)
+        } else {
+            None
+        }
+    }
+
+    /// Calculates the size of all files within `dirs` sub directories
+    fn size_of_dir(dir: &path::Path) -> u64 {
+        let mut size = 0;
+        for entry in dir.read_dir().unwrap() {
+            let entry = entry.unwrap();
+            let md = entry.metadata().unwrap();
+            if md.is_file() {
+                size = size + md.len();
+            } else if md.is_dir() {
+                size = size + Searcher::size_of_dir(&entry.path());
+            }
+        }
+
+        size
+    }
+}
+
 fn main() {
     let matches = App::new("Sizer")
                       .version(crate_version!())
@@ -51,50 +128,41 @@ fn main() {
                           .long("results")
                           .takes_value(true)
                           .help("The number of results to output. Defaults to 10."))
+                      .arg(Arg::with_name("depth")
+                          .short("d")
+                          .long("depth")
+                          .takes_value(true)
+                          .help("The depth to aggregate the resuls at. Defaults to 5."))
                       .get_matches();
 
     let root_dir = match matches.value_of("root") {
         Some(m) => path::PathBuf::from(m),
         None => env::current_dir().unwrap()
     };
-
-    let mut dir_info:Vec<DirectoryInfo> = Vec::new();
-    parse_sub_dirs(root_dir, &mut dir_info);
-    dir_info.sort();
-
-    let result_count: usize = match matches.value_of("result_count") {
+    
+    let mut result_count: usize = match matches.value_of("result_count") {
         Some(m) => usize::from_str_radix(m, 10).unwrap(),
         None => 10,
     };
 
-    if result_count > dir_info.len() {
-        let result_count = dir_info.len();
-    }
-
-    for info in dir_info.iter().rev().take(result_count) {
-        println!("{:?}", info);
-    }
-}
-
-/// Recursively searches `dir` and fills `info` with
-/// `DirectoryInfo` for each directory found.
-fn parse_sub_dirs(dir: path::PathBuf, info: &mut Vec<DirectoryInfo>) {
-    let mut total_size = 0;
-    let sub_dirs = dir.read_dir().unwrap();
-
-    for sub_dir in sub_dirs{
-        let sub_dir_path = path::PathBuf::from(sub_dir.unwrap().path());
-        let meta_data = fs::metadata(&sub_dir_path).unwrap();
-
-        if meta_data.is_file() {
-            total_size = total_size + meta_data.len();
-        } else {
-            parse_sub_dirs(sub_dir_path, info)
-        }
-    }
-    let dir_info = DirectoryInfo {
-        path: dir,
-        size: total_size,
+    let depth = match matches.value_of("depth") {
+        Some(m) => u64::from_str_radix(m, 10).unwrap(),
+        None => 5,
     };
-    info.push(dir_info);
+
+    let searcher = Searcher {
+        root_dir: root_dir,
+        depth: depth,
+    };
+
+    let mut results = searcher.search();
+    results.sort();
+
+    if result_count > results.len() {
+        result_count = results.len();
+    }
+
+    for info in results.iter().rev().take(result_count) {
+        println!("Directory: {}, Size: {}", info.path.to_str().unwrap(), info.size);
+    }
 }
