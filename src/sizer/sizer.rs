@@ -56,12 +56,13 @@ impl Searcher {
             if md.is_file() {
                 size_of_files = size_of_files + md.len();
             } else if md.is_dir() {
-                if Searcher::distance(&self.root_dir, &entry.path()).unwrap() < self.depth {
-                    self.parse_dir(&entry.path(), dirs);
+                let sub_dir = &entry.path();
+                if Searcher::distance(&self.root_dir, sub_dir).unwrap() < self.depth {
+                    self.parse_dir(sub_dir, dirs);
                 } else {
-                    let size = Searcher::size_of_dir(dir);
+                    let size = Searcher::size_of_dir(sub_dir);
                     let info = DirectoryInfo {
-                        path: path::PathBuf::from(dir),
+                        path: path::PathBuf::from(sub_dir),
                         size: size,
                     };
                     dirs.push(info);
@@ -158,11 +159,12 @@ fn main() {
     let mut results = searcher.search();
     results.sort();
 
+
     if result_count > results.len() {
         result_count = results.len();
     }
 
     for info in results.iter().rev().take(result_count) {
-        println!("Directory: {}, Size: {}", info.path.to_str().unwrap(), info.size);
+        println!("Directory: {:?}, Size: {}", info.path, info.size);
     }
 }
